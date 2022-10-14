@@ -1,3 +1,5 @@
+First, clone/install the repo.
+
 To build type:
  make
 
