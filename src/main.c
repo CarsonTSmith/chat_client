@@ -17,7 +17,6 @@ void *rd_from_socket(void *arg)
 {
 	char buf[BUF_SIZE];
 	int sockfd = *(int *)arg;
-
 	
 	while (1) {
 		if (read(sockfd, buf, BUF_SIZE) < 1) {
