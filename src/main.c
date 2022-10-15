@@ -61,7 +61,6 @@ void write_to_socket(const int sockfd, const char *username)
 int main(int argc, char *argv[])
 {
 	int srvrfd, clientfd;
-	char *username;
 	struct sockaddr_in serv_addr;
 	pthread_t rdthrd;
 
