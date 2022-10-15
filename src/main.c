@@ -15,7 +15,7 @@
 #define EXIT_CLIENT_SEQ "!!exit"
 #define EXIT_CLIENT_SEQ_LEN (sizeof(EXIT_CLIENT_SEQ)/sizeof(EXIT_CLIENT_SEQ[0]))
 
-void *rd_from_socket(void *arg)
+static void *rd_from_socket(void *arg)
 {
 	char buf[BUF_SIZE];
 	int sockfd = *(int *)arg;
@@ -41,7 +41,7 @@ void *rd_from_socket(void *arg)
  * This is so we can tell if a msg is new or part
  * of another msg.
  */
-void write_to_socket(const int sockfd, const char *username)
+static void write_to_socket(const int sockfd, const char *username)
 {
 	char *str = NULL;
 	char fullstr[BUF_SIZE], check_exit[EXIT_CLIENT_SEQ_LEN + 1];
