@@ -10,8 +10,10 @@
 #define PORT 8085
 
 // max amount of data that can be sent
-#define BUF_SIZE 1024
+#define BUF_SIZE 1024 
 
+#define EXIT_CLIENT_SEQ "!!exit"
+#define EXIT_CLIENT_SEQ_LEN (sizeof(EXIT_CLIENT_SEQ)/sizeof(EXIT_CLIENT_SEQ[0]))
 
 void *rd_from_socket(void *arg)
 {
@@ -42,11 +44,15 @@ void *rd_from_socket(void *arg)
 void write_to_socket(const int sockfd, const char *username)
 {
 	char *str = NULL;
-	char fullstr[BUF_SIZE];
+	char fullstr[BUF_SIZE], check_exit[EXIT_CLIENT_SEQ_LEN + 1];
 	size_t n = 0;
 
 	while (1) {
 		getline(&str, &n, stdin);
+		snprintf(check_exit, EXIT_CLIENT_SEQ_LEN, "%s", str);
+		if (!strcmp(EXIT_CLIENT_SEQ, check_exit))
+			break;
+	
 		snprintf(fullstr, BUF_SIZE, "1%s: %s", username, str);
 		if (write(sockfd, fullstr, strlen(fullstr) + 1) < 0) {
 			printf("Server disconnected, exiting\n");
@@ -55,6 +61,12 @@ void write_to_socket(const int sockfd, const char *username)
 
 		memset(fullstr, 0, sizeof(fullstr));
 	}
+}
+
+static void greeting()
+{
+	printf("Welcome to the server\n"
+		"You can exit by typing: !!exit\n");
 }
 
 // client
@@ -85,6 +97,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	greeting();
 	pthread_create(&rdthrd, NULL, &rd_from_socket, &srvrfd);
 
 	// argv[1] is username
