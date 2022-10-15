@@ -31,7 +31,7 @@ $(APPNAME) : $(OBJFILES)
 	$(CC) $(LDFLAGS) $^ -o $(APPNAME)
 
 # Add all warnings/errors to cflags default.  This is not required but is a best practice
-CFLAGS += -Wall -Werror
+CFLAGS += -Wall -Werror -g
 
 # The below content is from  http://make.mad-scientist.net/papers/advanced-auto-dependency-generation/
 # with the following changes:
