@@ -10,18 +10,19 @@
 #define PORT 8085
 
 // max amount of data that can be sent
-#define BUF_SIZE 1024 
+#define BUFSZ 8192
+#define HEADERSZ 8
 
 #define EXIT_CLIENT_SEQ "!!exit"
 #define EXIT_CLIENT_SEQ_LEN (sizeof(EXIT_CLIENT_SEQ)/sizeof(EXIT_CLIENT_SEQ[0]))
 
 static void *rd_from_socket(void *arg)
 {
-	char buf[BUF_SIZE];
+	char buf[BUFSZ];
 	int sockfd = *(int *)arg;
 	
 	while (1) {
-		if (read(sockfd, buf, BUF_SIZE) < 1) {
+		if (read(sockfd, buf, BUFSZ) < 1) {
 			printf("Server disconnected, exiting\n");
 			exit(-1);
 		}
@@ -43,23 +44,29 @@ static void *rd_from_socket(void *arg)
  */
 static void write_to_socket(const int sockfd, const char *username)
 {
-	char *str = NULL;
-	char fullstr[BUF_SIZE], check_exit[EXIT_CLIENT_SEQ_LEN + 1];
+	char *msg = NULL;
+	char msg_w_name[BUFSZ], check_exit[EXIT_CLIENT_SEQ_LEN + 1];
+	char msgsz[HEADERSZ + 1]; // + 1 for null char
+	char fullmsg[BUFSZ];
 	size_t n = 0;
 
 	while (1) {
-		getline(&str, &n, stdin);
-		snprintf(check_exit, EXIT_CLIENT_SEQ_LEN, "%s", str);
+		getline(&msg, &n, stdin);
+		snprintf(check_exit, EXIT_CLIENT_SEQ_LEN, "%s", msg);
 		if (!strcmp(EXIT_CLIENT_SEQ, check_exit))
 			break;
-	
-		snprintf(fullstr, BUF_SIZE, "1%s: %s", username, str);
-		if (write(sockfd, fullstr, strlen(fullstr) + 1) < 0) {
+		
+		msg[strlen(msg) - 1] = '\0'; // remove '\n'	
+		snprintf(msg_w_name, BUFSZ, "%s: %s", username, msg);
+		snprintf(msgsz, HEADERSZ + 1, "%08d", // 08 b/c HEADERSZ is 8
+                         (int)(strlen(msg_w_name) + 1));
+		snprintf(fullmsg, BUFSZ, "%s%s", msgsz, msg_w_name);
+		if (write(sockfd, fullmsg, strlen(fullmsg) + 1) < 0) {
 			printf("Server disconnected, exiting\n");
 			exit(-1);
 		}
 
-		memset(fullstr, 0, sizeof(fullstr));
+		memset(fullmsg, 0, sizeof(fullmsg));
 	}
 }
 
