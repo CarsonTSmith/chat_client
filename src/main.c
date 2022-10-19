@@ -16,19 +16,73 @@
 #define EXIT_CLIENT_SEQ "!!exit"
 #define EXIT_CLIENT_SEQ_LEN (sizeof(EXIT_CLIENT_SEQ)/sizeof(EXIT_CLIENT_SEQ[0]))
 
+#define SERVER_DISCONNECT_MSG "Server disconnected, exiting\n"
+
+/*                                                                              
+* If this is the first data being read for this msg                            
+* then the first HEADERSZ bytes will be the message length.                    
+* We will extract the message length and return it                             
+* as an int.                                                                   
+*                                                                              
+* returns - if successful, an int > -1, 0 otherwise                            
+*/                                                                             
+static int rd_msg_len(const char *buf)                                          
+{                                                                               
+	char msgsz[HEADERSZ + 1];                                               
+	char *endptr;                                                           
+	int ret;                                                                
+									  
+	memcpy(msgsz, buf, HEADERSZ);                                           
+	msgsz[HEADERSZ] = '\0';                                                 
+	ret = strtol(msgsz, &endptr, 10);                                       
+	if (ret >= 0)                                                           
+	  return ret;                                                     
+									  
+	return 0;                                                               
+}
+
+/*                                                                              
+ * Reads the msg header and gets the msg size.                                  
+ * Prepends a copy of the msg length to the                                     
+ * client msg buffer.                                                           
+ */                                                                             
+static int rd_header(char *buf, const int sockfd)           
+{                                  
+	int bytesrd;
+                                      
+	bytesrd = read(sockfd, buf, HEADERSZ);
+	if (bytesrd < 1) {
+		printf(SERVER_DISCONNECT_MSG);
+		exit(-1);
+	}
+	buf[HEADERSZ] = '\0';                                                   
+	return rd_msg_len(buf);                                                
+}
+
 static void *rd_from_socket(void *arg)
 {
 	char buf[BUFSZ];
+	int bytesrd = 0, msgsz = 0, result = 0;
 	int sockfd = *(int *)arg;
 	
 	while (1) {
-		if (read(sockfd, buf, BUFSZ) < 1) {
-			printf("Server disconnected, exiting\n");
-			exit(-1);
+		msgsz = rd_header(buf, sockfd);
+		while (bytesrd < msgsz) {
+			result = read(sockfd, buf + bytesrd, msgsz - bytesrd);
+			if (result > 0) {
+				bytesrd += result;
+			} else {
+				printf(SERVER_DISCONNECT_MSG);
+				exit(-1);
+			}	
+
 		}
 
 		printf("%s\n", buf);
 		memset(buf, 0, sizeof(buf));
+		bytesrd = 0;
+		msgsz = 0;
+		result = 0;
 	}
 
 	return NULL;
@@ -91,8 +145,6 @@ int main(int argc, char *argv[])
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(PORT);
 
-	// Convert IPv4 and IPv6 addresses from text to binary
-	// form
 	if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
 		printf("\nInvalid address/ Address not supported \n");
 		return -1;
