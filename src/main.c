@@ -130,16 +130,17 @@ static void greeting()
 		"You can exit by typing: !!exit\n");
 }
 
-// client
-int main(int argc, char *argv[])
+/*
+ * returns - the fd of the server 
+ */
+static int setup_socket()
 {
-	int srvrfd, clientfd;
+	int srvrfd;
 	struct sockaddr_in serv_addr;
-	pthread_t rdthrd;
 
 	if ((srvrfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		printf("\n Socket creation error \n");
-		return -1;
+		exit(-1);
 	}
 
 	serv_addr.sin_family = AF_INET;
@@ -147,23 +148,30 @@ int main(int argc, char *argv[])
 
 	if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
 		printf("\nInvalid address/ Address not supported \n");
-		return -1;
+		exit(-1);
 	}
 
-	if ((clientfd = connect(srvrfd, (struct sockaddr*)&serv_addr, 
-	     sizeof(serv_addr))) < 0) {
+	if (connect(srvrfd, (struct sockaddr*)&serv_addr, 
+	    sizeof(serv_addr)) < 0) {
 		printf("\nConnection Failed \n");
-		return -1;
+		exit(-1);
 	}
 
+	return srvrfd;
+}
+
+// client
+int main(int argc, char *argv[])
+{
+	int srvrfd;
+	pthread_t rdthrd;
+
+	srvrfd = setup_socket();	
 	greeting();
 	pthread_create(&rdthrd, NULL, &rd_from_socket, &srvrfd);
 
 	// argv[1] is username
 	write_to_socket(srvrfd, argv[1] == NULL ? "Anonymous" : argv[1]);
-
-	// closing the connected socket
-	close(clientfd);
 
 	return 0;
 }
